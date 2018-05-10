@@ -1,0 +1,13 @@
+{
+    "name": "phannam1412/supersql",
+    "authors": [
+        {
+            "name": "phannam1412",
+            "email": "phannam1412@yahoo.com"
+        }
+    ],
+    "require": {
+        "phpunit/phpunit": "^7.1",
+        "greenlion/php-sql-parser": "^4.1"
+    }
+}
