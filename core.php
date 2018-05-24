@@ -2,9 +2,11 @@
 
 namespace SuperSql;
 
+use const PHP_EOL;
 use const PHP_INT_MAX;
 use const PHP_INT_MIN;
 use PHPSQLParser\PHPSQLParser;
+use function str_repeat;
 
 class SuperSql {
 
@@ -1152,6 +1154,20 @@ class SuperSql {
         print str_replace(PHP_EOL, PHP_EOL . '   ',$text);
     }
 
+    public static function mbStrPad($str, $pad_len, $pad_str = ' ', $dir = STR_PAD_RIGHT, $encoding = NULL)
+    {
+        $encoding = $encoding === NULL ? mb_internal_encoding() : $encoding;
+        $padBefore = $dir === STR_PAD_BOTH || $dir === STR_PAD_LEFT;
+        $padAfter = $dir === STR_PAD_BOTH || $dir === STR_PAD_RIGHT;
+        $pad_len -= mb_strlen($str, $encoding);
+        $targetLen = $padBefore && $padAfter ? $pad_len / 2 : $pad_len;
+        $strToRepeatLen = mb_strlen($pad_str, $encoding);
+        $repeatTimes = ceil($targetLen / $strToRepeatLen);
+        $repeatedString = str_repeat($pad_str, max(0, $repeatTimes)); // safe if used with valid unicode sequences (any charset)
+        $before = $padBefore ? mb_substr($repeatedString, 0, (int)floor($targetLen), $encoding) : '';
+        $after = $padAfter ? mb_substr($repeatedString, 0, (int)ceil($targetLen), $encoding) : '';
+        return $before . $str . $after;
+    }
 
     public static function getFormattedOutput($rows) {
 
@@ -1185,14 +1201,14 @@ class SuperSql {
         $row = reset($rows);
         foreach($row as $col_name => $value) {
             $padding = $length[$col_name];
-            $text .= str_pad($col_name, $padding) . ' | ';
+            $text .= self::mbStrPad($col_name, $padding) . ' | ';
         }
 
         # Separation between column header and row data.
         $text .= PHP_EOL;
         foreach($row as $col_name => $value) {
             $padding = $length[$col_name];
-            $text .= str_pad('', $padding, '-', STR_PAD_BOTH) . '---';
+            $text .= self::mbStrPad('', $padding, '-', STR_PAD_BOTH) . '---';
         }
 
         # Row data.
@@ -1207,8 +1223,8 @@ class SuperSql {
                     $value = substr($value, 0, $padding - 2) . '..';
                 }
 
-                $line = str_pad(str_replace("â€™","'",$value), $padding, ' ') . ' | ';
-                $text .= $line;
+                $line = self::mbStrPad(str_replace("â€™","'",$value), $padding, ' ') . ' | ';
+                $text .= str_replace(PHP_EOL, ' ', $line);
             }
             $text .= PHP_EOL;
         }
