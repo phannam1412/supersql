@@ -60,14 +60,73 @@ SuperSql::defineSelectFromTable("term_relationships", function() {
     return json_decode(json_encode($data), true);
 });
 
-//$rows = SuperSql::execute(    "  SELECT * FROM posts p
-//        INNER JOIN term_relationships tr ON p.ID = tr.object_id
-//        INNER JOIN term_taxonomy tt ON tr.term_taxonomy_id = tt.term_taxonomy_id
-//      "
-//);
+SuperSql::defineSelectFromTable("products", function() {
+    $products = wc_get_products(['numberposts' => 1000]);
+    $result = [];
+    foreach($products as $p) $result[] = $p->get_data();
+    return $result;
+});
+
+SuperSql::defineSelectFromTable("product_categories", function() {
+    $data = get_terms(['taxonomy' => 'product_cat']);
+    return json_decode(json_encode($data), true);
+});
+
+SuperSql::defineSelectFromTable("product_category_relation", function() {
+    $products = SuperSql::execute("select * from products");
+    $result = [];
+    foreach($products as $p) {
+        $cats = json_decode($p['category_ids'], true);
+        foreach($cats as $c) {
+            $result[] = [
+                'category' => $c,
+                'product' => $p['id'],
+            ];
+        }
+    }
+    return $result;
+});
+
+//$rows = SuperSql::execute("
+//select pc.name, count(*) from products p
+//inner join product_category_relation pcr on p.id = pcr.product
+//inner join product_categories pc on pcr.category = pc.term_id
+//group by (pc.name)
+//");
 //SuperSql::printRows($rows);exit;
 
 $tests = [];
+
+$tests[] = [
+
+    # expected
+    function() {
+        $result = [];
+        $products = wc_get_products(['numberposts' => 1000]);
+        $mapping = [];
+        foreach($products as $p) {
+            $categories = get_the_terms($p->id, 'product_cat');
+            foreach($categories as $c) {
+                if(!isset($mapping[$c->name]))
+                    $mapping[$c->name] = 0;
+                $mapping[$c->name]++;
+            }
+        }
+        foreach($mapping as $key => $value)
+            $result[] = [
+                'category' => $key,
+                'product_count' => $value,
+            ];
+        return $result;
+    },
+
+    # actual
+    "select pc.name AS category, count(*) AS product_count from products p
+    inner join product_category_relation pcr on p.id = pcr.product
+    inner join product_categories pc on pcr.category = pc.term_id
+    group by pc.name
+    "
+];
 
 $tests[] = [
 
@@ -101,6 +160,7 @@ $tests[] = [
     "SELECT user_email,post_title FROM posts p inner join users u on p.post_author = u.ID"
 ];
 
+# List users together with their posts.
 $tests[] = [
 
     # expected
@@ -121,6 +181,7 @@ $tests[] = [
     "SELECT user_email AS user, post_title AS post FROM posts p INNER JOIN users u ON p.post_author = u.ID"
 ];
 
+# Every user has many posts ?
 $tests[] = [
 
     # expected
