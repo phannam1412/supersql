@@ -126,10 +126,7 @@ class SuperSql {
 
     # Aggregate Function COUNT().
     private function aggregateFuncCount($parent_row, $param) {
-
-        if(array_key_exists($param,$parent_row)) return 1;
-
-        return count($parent_row);
+        return count($parent_row['children']);
     }
 
     # Aggregate Function SUM().
