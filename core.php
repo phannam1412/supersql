@@ -991,7 +991,7 @@ class SuperSql {
 
         $rows = $this->handleSelect($parsed);
 
-        if(empty($rows)) return;
+        if(empty($rows)) return null;
 
         $func = self::$inserts[$table];
         foreach($rows as $row) $func($this->removeColumnPrefixForRow($row));
@@ -999,9 +999,25 @@ class SuperSql {
         return count($rows);
     }
 
+    public $optimizations = [];
+    private function determineOptimizations() {
+
+        # Is select single table and limit number of rows.
+        if(count($this->parsed['FROM']) === 1 && isset($this->parsed['LIMIT'])) {
+            $this->optimizations['query_from'] = $this->parsed['LIMIT']['offset'];
+            $this->optimizations['query_limit'] = $this->parsed['LIMIT']['rowcount'];
+        }
+    }
+
+    public function getOptimizations() {
+        return $this->optimizations;
+    }
+
     private function handleSelect($parsed) {
 
         $this->parsed = $parsed;
+
+        $this->determineOptimizations($this->parsed);
 
         $this->getColumnsForSelect($this->parsed['SELECT']);
 

@@ -7,12 +7,13 @@ use SuperSql\SuperSql;
 
 $wp_did_header = true;
 
-// Load the WordPress library.
+# Load the WordPress library.
 require_once( dirname(__FILE__) . '/wp-load.php' );
 
-// Set up the WordPress query.
+# Set up the WordPress query.
 wp();
 
+# users
 SuperSql::defineSelectFromTable("users", function() {
     $users = get_users();
     $users = array_map(function($item){
@@ -22,18 +23,21 @@ SuperSql::defineSelectFromTable("users", function() {
     return $data;
 });
 
+# pending_posts
 SuperSql::defineSelectFromTable("pending_posts", function() {
     $posts = get_posts(['numberposts' => 1000, 'post_status' => 'pending']);
     $data = json_decode(json_encode($posts), TRUE);
     return $data;
 });
 
+# posts
 SuperSql::defineSelectFromTable("posts", function() {
     $posts = get_posts(['numberposts' => 1000]);
     $data = json_decode(json_encode($posts), TRUE);
     return $data;
 });
 
+# taxonomies
 SuperSql::defineSelectFromTable("taxonomies", function() {
     $data = get_taxonomies();
     $result = [];
@@ -43,35 +47,46 @@ SuperSql::defineSelectFromTable("taxonomies", function() {
     return $result;
 });
 
+# terms
 SuperSql::defineSelectFromTable("terms", function() {
     $data = get_terms();
     return json_decode(json_encode($data), true);
 });
 
+# term_taxonomy
 SuperSql::defineSelectFromTable("term_taxonomy", function() {
     global $wpdb;
     $data = $wpdb->get_results("SELECT * FROM wp_term_taxonomy");
     return json_decode(json_encode($data), true);
 });
 
+# term_relationships
 SuperSql::defineSelectFromTable("term_relationships", function() {
     global $wpdb;
     $data = $wpdb->get_results("SELECT * FROM wp_term_relationships");
     return json_decode(json_encode($data), true);
 });
 
+$cache = false;
+
+# products
 SuperSql::defineSelectFromTable("products", function() {
+    global $cache;
+    if($cache) return $cache;
     $products = wc_get_products(['numberposts' => 1000]);
     $result = [];
     foreach($products as $p) $result[] = $p->get_data();
+    $cache = $result;
     return $result;
 });
 
+# product_categories
 SuperSql::defineSelectFromTable("product_categories", function() {
     $data = get_terms(['taxonomy' => 'product_cat']);
     return json_decode(json_encode($data), true);
 });
 
+# product_category_relation
 SuperSql::defineSelectFromTable("product_category_relation", function() {
     $products = SuperSql::execute("select * from products");
     $result = [];
@@ -88,10 +103,7 @@ SuperSql::defineSelectFromTable("product_category_relation", function() {
 });
 
 //$rows = SuperSql::execute("
-//select pc.name, count(*) from products p
-//inner join product_category_relation pcr on p.id = pcr.product
-//inner join product_categories pc on pcr.category = pc.term_id
-//group by (pc.name)
+//select * from products
 //");
 //SuperSql::printRows($rows);exit;
 
@@ -203,33 +215,6 @@ $tests[] = [
     "SELECT u.user_email AS user, count(*) AS post_count FROM users u INNER JOIN posts p ON u.ID = p.post_author GROUP BY user_email"
 ];
 
-
-//$tests[] = [
-//
-//    # expected
-//    function() {
-//        $posts = get_posts(['numberposts' => 1000]);
-//        $mapping = [];
-//        foreach($posts as $post) {
-//            $terms = wp_get_post_terms($post->ID);
-//            foreach($terms as $term) {
-//                if(!isset($mapping[$term->taxonomy])) {
-//                    $mapping[$term->taxonomy] = 0;
-//                }
-//                $mapping[$term->taxonomy]++;
-//            }
-//        }
-//        $result = [];
-//        foreach($mapping as $key => $value) $result[] = ['taxonomy' => $key, 'post_count' => $value];
-//        return $result;
-//    },
-//
-//    # actual
-//    "  SELECT tt.taxonomy, count(*) AS post_count FROM posts p
-//        INNER JOIN term_relationships tr ON p.ID = tr.object_id
-//        INNER JOIN term_taxonomy tt ON tr.term_taxonomy_id = tt.term_taxonomy_id
-//      "
-//];
 
 foreach($tests as $key => $test) {
 
